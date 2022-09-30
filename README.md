@@ -33,11 +33,7 @@ download the jar files in the following link https://xerces.apache.org/mirrors.c
 
 You can also directly use the OMOctave package directly from the directory where you have cloned, without need to perform the above steps. But the package cannot be used globally.
 ```
-
-
-```
-
-# Usage
+### Usage
 ```
 >>> omc=OMOctave();
 >>> omc.sendExpression("getVersion()")
@@ -64,4 +60,5 @@ LOG_SUCCESS       | info    | The simulation finished successfully.
     timeTotal = 4.795528603068404
 end SimulationResult;
 ```
+
 To see the list of available OpenModelicaScripting API see    (https://www.openmodelica.org/doc/OpenModelicaUsersGuide/latest/scripting_api.html
