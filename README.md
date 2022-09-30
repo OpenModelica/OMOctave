@@ -1,36 +1,45 @@
-# OMMatlab
-Matlab scripting OpenModelica interface using ZEROMQ 
+# Octave
+Octave scripting OpenModelica interface using ZEROMQ
 
 # Requirement:
 [Openmodelica](https://www.openmodelica.org/)<br>
-[Matlab](https://se.mathworks.com/products/matlab.html)<br>
-[zeromq/jeromq](https://github.com/zeromq/jeromq)<br>
-
-The jeromq/zeromq library can be build by following the instructions in the repository, or the users can use the pre-build "jeromq-0.4.4-SNAPSHOT.jar" available in this repository and start using it straight away.
+[Octave](https://octave.org/)<br>
+[zeromq](https://zeromq.org/)<br>
 
 # Installation
-Clone the repository and add the installation directory to Matlab PATH for future sessions. For Example <br>
+Clone the repository and add the installation directory to Octave PATH for future sessions. For Example <br>
+
 ```
-from the matlab terminal, in windows
->>> pathtool
-will open a window, add the directory to the list of entries and save. For example in windows
-"C:/OPENMODELICAGIT/OpenModelica/OMMatlab"
+installing zeromq
+>>> pkg install -forge zeromq
 ```
+
 ```
-Then we have to set the java classpath, so that the jeromq library can be used from Matlab. for that we need to create a file called javaclasspath.txt and add the jar file location to the file, To do that 
+from the Octave terminal, edit or create config file
+
+The config file should be created in home directory, the below command will show the home directory
 >>> prefdir
-will show the preferred directory path, For example in windows 
-'C:\Users\arupa54\AppData\Roaming\MathWorks\MATLAB\R2017b'
-create a file javaclasspath.txt in that location and add the jar file path to the file, for example in windows the entry would be
-C:/OPENMODELICAGIT/OpenModelica/OMMatlab/jeromq-0.4.4-SNAPSHOT.jar
-Note: The path should be added without any quotes either single or double
+ans: "C:\Users\arupa54"
+>>> cd ("C:/Users/arupa54)
+>>> edit .octaverc
+The above command will open the config file in Octave editor, now add the following commands to the ".octaverc" file
+
+addpath("C:/OPENMODELICAGIT/OpenModelica/OMOctave");
+javaaddpath ("C:/OPENMODELICAGIT/OpenModelica/OMOctave/xercesImpl.jar");
+javaaddpath ("C:/OPENMODELICAGIT/OpenModelica/OMOctave/xml-apis.jar");
+
+The xml parser uses the xerces java library and two jar files are needed "xercesImpl.jar" and "xml-apis.jar" which is provided in the repository, you can also
+download the jar files in the following link https://xerces.apache.org/mirrors.cgi#binary
+
+You can also directly use the OMOctave package directly from the directory where you have cloned, without need to perform the above steps. But the package cannot be used globally.
 ```
-You can also directly use the OMMatlab package directly from the directory where you have cloned, without need to perform the above steps. But the package cannot be used globally.
+
+
+```
 
 # Usage
 ```
->>> import OMMatlab.*;
->>> omc=OMMatlab();
+>>> omc=OMOctave();
 >>> omc.sendExpression("getVersion()")
 "v1.13.0-dev-531-gde26b558a (64-bit)"
 >>> omc.sendExpression("model a end a;")
