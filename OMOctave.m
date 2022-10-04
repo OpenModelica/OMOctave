@@ -346,15 +346,16 @@ classdef OMOctave < handle
 
         function result= getQuantities(obj,args)
             if isempty(obj.quantitieslist)
-                result = [];
+                result = {};
                 return;
             end
             if exist('args', 'var')
-                tmpresult=[];
+                tmpresult = {};
+                args = cellstr(args);
                 for n=1:length(args)
                     for q=1:length(obj.quantitieslist)
                         if(strcmp(obj.quantitieslist(q).name,args(n)))
-                            tmpresult=[tmpresult;obj.quantitieslist(q)];
+                            tmpresult{n}= obj.quantitieslist(q);
                         end
                     end
                 end
@@ -367,11 +368,12 @@ classdef OMOctave < handle
 
         function result= getLinearQuantities(obj,args)
             if exist('args', 'var')
-                tmpresult=[];
+                tmpresult={};
+                args = cellstr(args);
                 for n=1:length(args)
                     for q=1:length(obj.linearquantitylist)
                         if(strcmp(obj.linearquantitylist(q).name,args(n)))
-                            tmpresult=[tmpresult;obj.linearquantitylist(q)];
+                            tmpresult{n}=obj.linearquantitylist(q);
                         end
                     end
                 end
@@ -489,7 +491,7 @@ classdef OMOctave < handle
         % check for parameter modifiable or not
         function result = isParameterChangeable(obj, name, value)
             q = getQuantities(obj, name);
-            if strcmp(q.changeable, "false")
+            if strcmp(q{1}.changeable, "false")
                 disp("| info |  setParameters() failed : It is not possible to set the following signal " + """" + name + """" + ", It seems to be structural, final, protected or evaluated or has a non-constant binding, use sendExpression(setParameterValue("+ obj.modelname + ", " + name + ", " + value + "), parsed=false)" + " and rebuild the model using buildModel() API")
                 result = false;
                 return;
