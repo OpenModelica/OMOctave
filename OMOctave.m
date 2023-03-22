@@ -502,6 +502,12 @@ classdef OMOctave < handle
 
         function setSimulationOptions(obj, args)
             if exist('args', 'var')
+            
+                if isvector(args)
+
+                   error("Please Enter the Options in a column format")
+                end
+                
                 args = cellstr(args);
                 for n=1:length(args)
                     val=strrep(char(args{n})," ","");
@@ -520,6 +526,13 @@ classdef OMOctave < handle
 
         function setLinearizationOptions(obj,args)
             if exist('args', 'var')
+            
+            
+                if isvector(args)
+
+                   error("Please Enter the Options in a column format")
+                end
+                
                 args = cellstr(args);
                 for n=1:length(args)
                     val=strrep(char(args{n}), " ", "");
