@@ -955,7 +955,7 @@ classdef OMOctave < handle
         end
 
         function result = parseExpression(obj, args)
-          final = regexp(args, '"(.*?)"|[{}()=]|[a-zA-Z0-9_.]+', 'match');
+          final = regexp(args,'"(.*?)"|[{}()=]|[-+a-zA-Z0-9_.]+','match');
           if(length(final) > 1)
             if(strcmp(char(final{1}), "{") && ~strcmp(char(final{2}), "{"))
               buff = {};
