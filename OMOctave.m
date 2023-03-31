@@ -780,7 +780,7 @@ classdef OMOctave < handle
                     fprintf(fileID,"\n")
                 end
                fclose(fileID);
-               overridevar=[' -overrideFile=',overridefile];
+               tmpoverride2=[' -overrideFile=',overridefile];
             else
                 tmpoverride2 = '';
             end
