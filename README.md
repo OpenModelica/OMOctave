@@ -33,6 +33,15 @@ download the jar files in the following link https://xerces.apache.org/mirrors.c
 
 You can also directly use the OMOctave package directly from the directory where you have cloned, without need to perform the above steps. But the package cannot be used globally.
 ```
+### Several OpenModelica versions
+`OMOctave()` starts the omc from the `PATH`, or on Windows the OpenModelica that the environment variable `OPENMODELICAHOME` points to. The Windows installer allows several versions to be installed side by side and sets `OPENMODELICAHOME_<version>` for each of them (`OPENMODELICAHOME_1_27_0` for version 1.27.0). Select one of them with the second argument:
+```
+>>> omc=OMOctave('', '1.27.0');   % exactly this version
+>>> omc=OMOctave('', '1.27');     % the newest installed 1.27.x
+>>> OMOctave.installedVersions()  % what is installed, newest first
+```
+The first argument is the path to an omc executable, `OMOctave('C:/OpenModelica/bin/omc.exe')`.
+
 ### Usage
 ```
 >>> omc=OMOctave();

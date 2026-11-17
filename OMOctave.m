@@ -54,33 +54,54 @@ classdef OMOctave < handle
         linearstates
         linearquantitylist
         %fileid
+        omhome=''  % installation directory of the omc of this session
     end
     methods
-        function obj = OMOctave(omcpath)
+        function obj = OMOctave(omcpath, version)
+            % obj = OMOctave()                 the default OpenModelica, see locateOMHome
+            % obj = OMOctave(omcpath)          the omc with the given path
+            % obj = OMOctave('', version)      one of the installed versions, e.g. '1.27.0',
+            %                                  or '1.27' for the newest installed 1.27.x
+            if ~exist('omcpath', 'var')
+                omcpath = '';
+            end
+            if ~exist('version', 'var')
+                version = '';
+            end
+            omcpath = char(omcpath);
+            version = char(version);
+            if isempty(omcpath)
+                obj.omhome = OMOctave.locateOMHome(version);
+                if ~isempty(obj.omhome)
+                    if ispc
+                        omcpath = strrep(fullfile(obj.omhome,'bin','omc.exe'),'\','/');
+                    else
+                        omcpath = fullfile(obj.omhome,'bin','omc');
+                    end
+                end
+            else
+                obj.omhome = fileparts(fileparts(omcpath));
+            end
             %randomstring = char(97 + floor(26 .* rand(10,1)))';
             [~,randomstring]=fileparts(tempname);
             if ispc
-                if ~exist('omcpath', 'var')
-                    omhome = getenv('OPENMODELICAHOME');
-                    omhomepath = strrep(fullfile(omhome,'bin','omc.exe'),'\','/');
-                    cmd = ['START /b',' ',omhomepath,' --interactive=zmq -z=octave.',randomstring];
-                else
-                    [dirname1,~]=fileparts(fileparts(omcpath));
-                    %disp(dirname1)
-                    cmd = ['START /b',' ',omcpath,' --interactive=zmq -z=octave.',randomstring];
+                if isempty(omcpath)
+                    % no OPENMODELICAHOME and no OPENMODELICAHOME_<version>: use omc from PATH
+                    omcpath = 'omc';
                 end
+                cmd = ['START /b',' ',omcpath,' --interactive=zmq -z=octave.',randomstring];
                 portfile = strcat('openmodelica.port.octave.',randomstring);
             else
                 if ismac && system("which omc") ~= 0
                     %cmd =['/opt/openmodelica/bin/omc --interactive=zmq -z=matlab.',randomstring,' &'];
-                    if ~exist('omcpath', 'var')
+                    if isempty(omcpath)
                         cmd =['/opt/openmodelica/bin/omc --interactive=zmq -z=octave.',randomstring, ' >log.txt', ' &'];
                     else
                         cmd =[omcpath, ' --interactive=zmq -z=octave.',randomstring, ' >log.txt', ' &'];
                     end
                 else
                     %cmd =['omc --interactive=zmq -z=matlab.',randomstring,' &'];
-                    if ~exist('omcpath', 'var')
+                    if isempty(omcpath)
                         cmd =['omc --interactive=zmq -z=octave.',randomstring, ' >log.txt', ' &'];
                     else
                         cmd =[omcpath, ' --interactive=zmq -z=octave.',randomstring, ' >log.txt', ' &'];
@@ -716,7 +737,7 @@ classdef OMOctave < handle
                     finalsimulationexe = [getexefile,overridevar,csvinput,r,simflags];
                     %disp(finalsimulationexe);
                     if ispc
-                        omhome = getenv('OPENMODELICAHOME');
+                        omhome = obj.sessionOMHome();
                         %set dll path needed for windows simulation
                         dllpath = [strrep(fullfile(omhome,'bin'),'\','/'),';',strrep(fullfile(omhome,'lib/omc'),'\','/'),';',strrep(fullfile(omhome,'lib/omc/cpp'),'\','/'),';',strrep(fullfile(omhome,'lib/omc/omsicpp'),'\','/'),';',getenv('PATH')];
                         %disp(dllpath);
@@ -1033,10 +1054,173 @@ classdef OMOctave < handle
           end
         end
 
+        function omhome = sessionOMHome(obj)
+            % the installation directory of the omc of this session
+            omhome = obj.omhome;
+            if isempty(omhome)
+                omhome = getenv('OPENMODELICAHOME');
+            end
+        end
+
         function delete(obj)
             if (obj.connection)
                 obj.sendExpression("quit()")
                 obj.connection = false;
+            end
+        end
+    end
+    methods (Static)
+        % Where to find OpenModelica if several versions are installed.
+        %
+        % The Windows installer keeps OPENMODELICAHOME for the version selected as the
+        % default one and sets OPENMODELICAHOME_<version> for each installed version, with
+        % every character of the version that is not a letter or a digit replaced by an
+        % underscore: version 1.27.0 is found via OPENMODELICAHOME_1_27_0.
+
+        function name = versionEnvName(version)
+            % name of the environment variable with the installation directory of a version,
+            % a leading v (as in the git tag v1.27.0) is ignored
+            version = strtrim(char(version));
+            if ~isempty(regexp(version, '^[vV][0-9]', 'once'))
+                version = version(2:end);
+            end
+            name = ['OPENMODELICAHOME_', regexprep(version, '[^0-9A-Za-z]', '_')];
+        end
+
+        function vars = environmentVersions()
+            % the environment variables OPENMODELICAHOME_<version> as a N x 2 cell array of
+            % names and values
+            vars = cell(0,2);
+            if ispc
+                [status, out] = system('set OPENMODELICAHOME_');
+            else
+                [status, out] = system('env | grep -i "^OPENMODELICAHOME_"');
+            end
+            if status ~= 0
+                return;
+            end
+            lines = regexp(out, '\r?\n', 'split');
+            for i = 1:numel(lines)
+                tok = regexp(lines{i}, '^([^=]+)=(.*)$', 'tokens', 'once');
+                if ~isempty(tok) && strncmpi(tok{1}, 'OPENMODELICAHOME_', 17)
+                    vars(end+1,:) = {tok{1}, strtrim(tok{2})}; %#ok<AGROW>
+                end
+            end
+        end
+
+        function key = versionSortKey(name)
+            % Sort key of a name OPENMODELICAHOME_<version>, the newest version has the
+            % highest key: [major minor patch kind numbers...].
+            % The version is <major>_<minor>_<patch> followed by nothing for a release
+            % (1_27_0, kind 1), by a pre-release part for a build before that release
+            % (1_28_0_dev_1962_g6e348e217c, kind 0) or by the number of commits for a build
+            % after that release (1_27_0_5_g0123456789, kind 2). The numbers that follow
+            % decide between two builds of the same kind.
+            key = zeros(1,8);
+            parts = strsplit(name(18:end), '_');
+            isnum = false(1,numel(parts));
+            for i = 1:numel(parts)
+                isnum(i) = ~isempty(parts{i}) && all(isstrprop(parts{i}, 'digit'));
+            end
+            n = 0;
+            while n < 3 && n < numel(parts) && isnum(n+1)
+                n = n + 1;
+                key(n) = str2double(parts{n});
+            end
+            rest = parts(n+1:end);
+            restnum = isnum(n+1:end);
+            if isempty(rest)
+                key(4) = 1;
+            elseif restnum(1)
+                key(4) = 2;
+            end
+            numbers = rest(restnum);
+            for i = 1:min(4,numel(numbers))
+                key(4+i) = str2double(numbers{i});
+            end
+        end
+
+        function result = hasOMC(omhome)
+            % whether there is an omc executable in the installation directory
+            result = exist(fullfile(omhome,'bin','omc.exe'), 'file') == 2 || exist(fullfile(omhome,'bin','omc'), 'file') == 2;
+        end
+
+        function versions = installedVersions(vars)
+            % The installed OpenModelica versions, newest first, as a N x 2 cell array of the
+            % names of the environment variables OPENMODELICAHOME_<version> and the
+            % installation directories. Variables which point to a directory without an omc
+            % executable are left out.
+            if nargin < 1
+                vars = OMOctave.environmentVersions();
+            end
+            versions = cell(0,2);
+            keys = zeros(0,8);
+            for i = 1:size(vars,1)
+                if ~isempty(vars{i,2}) && OMOctave.hasOMC(vars{i,2})
+                    versions(end+1,:) = vars(i,:); %#ok<AGROW>
+                    keys(end+1,:) = OMOctave.versionSortKey(vars{i,1}); %#ok<AGROW>
+                end
+            end
+            if ~isempty(versions)
+                [~, order] = sortrows(keys, -(1:8));
+                versions = versions(order,:);
+            end
+        end
+
+        function omhome = locateOMHome(version, vars, defaulthome, windows)
+            % The installation directory of the OpenModelica to use, '' for omc from PATH.
+            % The first one that applies:
+            %  1. version: OPENMODELICAHOME_<version>, or the newest
+            %     OPENMODELICAHOME_<version>... if only the start of a version is given
+            %     ('1.27' for the newest 1.27.x). An error if that version is not installed.
+            %  2. on Windows, OPENMODELICAHOME, if there is an omc executable in it
+            %  3. on Windows, the newest OPENMODELICAHOME_<version>
+            %  4. omc from PATH
+            % vars, defaulthome and windows default to the environment variables
+            % OPENMODELICAHOME_<version>, OPENMODELICAHOME and ispc.
+            if nargin < 1
+                version = '';
+            end
+            if nargin < 2
+                vars = OMOctave.environmentVersions();
+            end
+            if nargin < 3
+                defaulthome = getenv('OPENMODELICAHOME');
+            end
+            if nargin < 4
+                windows = ispc;
+            end
+            version = char(version);
+            omhome = '';
+            versions = OMOctave.installedVersions(vars);
+
+            if ~isempty(version)
+                name = OMOctave.versionEnvName(version);
+                index = find(strcmpi(versions(:,1), name), 1);
+                if isempty(index)
+                    % versions are sorted, newest first
+                    index = find(strncmpi(versions(:,1), [name, '_'], length(name)+1), 1);
+                end
+                if isempty(index)
+                    if isempty(versions)
+                        installed = 'none';
+                    else
+                        installed = strjoin(versions(:,1)', ', ');
+                    end
+                    error('OMOctave:versionNotFound', 'Cannot find OpenModelica version "%s": no environment variable %s or %s_*. Installed versions: %s', version, name, name, installed);
+                end
+                omhome = versions{index,2};
+                return;
+            end
+
+            if windows
+                % Without versioned installations the path is used as it is, as it always
+                % was. With them, a path left behind by an uninstalled version is skipped.
+                if ~isempty(defaulthome) && (isempty(versions) || OMOctave.hasOMC(defaulthome))
+                    omhome = defaulthome;
+                elseif ~isempty(versions)
+                    omhome = versions{1,2};
+                end
             end
         end
     end
