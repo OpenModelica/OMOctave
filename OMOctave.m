@@ -89,7 +89,8 @@ classdef OMOctave < handle
                     % no OPENMODELICAHOME and no OPENMODELICAHOME_<version>: use omc from PATH
                     omcpath = 'omc';
                 end
-                cmd = ['START /b',' ',omcpath,' --interactive=zmq -z=octave.',randomstring];
+                % quoted: the installation directory can contain spaces (C:\Program Files\...)
+                cmd = ['START "" /b "',omcpath,'" --interactive=zmq -z=octave.',randomstring];
                 portfile = strcat('openmodelica.port.octave.',randomstring);
             else
                 if ismac && system("which omc") ~= 0
@@ -110,7 +111,13 @@ classdef OMOctave < handle
                 portfile = strcat('openmodelica.',getenv('USER'),'.port.octave.',randomstring);
             end
             %disp(cmd);
-            system(cmd);
+            if ispc
+                % do not wait for omc: system(cmd) only returns when omc ends, as omc
+                % inherits the pipe that system reads the output from
+                system(cmd, false, 'async');
+            else
+                system(cmd);
+            end
             %pause(0.2);
             obj.portfile = strrep(fullfile(tempdir,portfile),'\','/');
             %disp(obj.portfile)
